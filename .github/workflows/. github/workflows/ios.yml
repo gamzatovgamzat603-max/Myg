@@ -1,0 +1,38 @@
+name: Build iOS Application
+on: [push, workflow_dispatch]
+
+jobs:
+  build-ios:
+    runs-on: macos-14
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Build Tools
+        run: |
+          pip install --upgrade pip
+          pip install briefcase kivy
+
+      - name: Package App for iOS
+        run: |
+          # Автоматическое создание Xcode-шаблона и сборка приложения
+          briefcase package iOS --no-sign
+
+      - name: Find and Package IPA
+        run: |
+          mkdir -p Payload
+          # Ищем скомпилированное приложение .app и переносим в Payload
+          APP_PATH=$(find . -name "*.app" -type d | head -n 1)
+          cp -r "$APP_PATH" Payload/
+          zip -r MyGame.ipa Payload/
+
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Ready-iOS-IPA
+          path: MyGame.ipa
