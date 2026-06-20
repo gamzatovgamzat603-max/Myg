@@ -1,0 +1,38 @@
+name: Build iOS IPA
+on: [push, workflow_dispatch]
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Kivy-iOS and Build
+        run: |
+          pip install kivy-ios
+          # Инициализируем проект напрямую через модуль python
+          python -m kivy_ios.toolchain create "mypingpong" .
+          python -m kivy_ios.toolchain build python3 kivy
+
+      - name: Compile Xcode Project
+        run: |
+          cd mypingpong-ios
+          xcodebuild -project mypingpong.xcodeproj -scheme mypingpong -configuration Debug -sdk iphoneos CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
+
+      - name: Create IPA Package
+        run: |
+          mkdir -p Payload
+          cp -r mypingpong-ios/build/Debug-iphoneos/mypingpong.app Payload/
+          zip -r MyPingPong.ipa Payload/
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: iOS-IPA-Package
+          path: MyPingPong.ipa
